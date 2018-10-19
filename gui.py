@@ -204,7 +204,7 @@ def main():
             comp_s()
             comp_ro()
             U_grid()
-            ent5.insert(0, '7, 8, 9, 10')
+            ent5.insert(0, '7 8 9 10')
             k_par()
             Koshi()
             print('test3 - ok')
