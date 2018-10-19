@@ -6,9 +6,10 @@ import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 import warnings
+import sys
 
 
-def z_par(ev):
+def z_par():
     global a, b
     try:
         (a, b) = map(float, ent1.get().split())
@@ -17,7 +18,7 @@ def z_par(ev):
         isok.set('Ошибка ввода параметров z(t)')
 
 
-def s_par(ev):
+def s_par():
     global c, d
     try:
         (c, d) = map(float, ent2.get().split())
@@ -26,7 +27,7 @@ def s_par(ev):
         isok.set('Ошибка ввода параметров S(t)')
 
 
-def ro_par(ev):
+def ro_par():
     global e
     try:
         e = float(ent3.get())
@@ -35,7 +36,7 @@ def ro_par(ev):
         isok.set('Ошибка ввода параметра ro(w)')
 
 
-def u_par(ev):
+def u_par():
     global dy
     try:
         dy = float(ent4.get())
@@ -44,7 +45,7 @@ def u_par(ev):
         isok.set('Ошибка ввода параметра U(y)')
 
 
-def k_par(ev):
+def k_par():
     global x0, y0, beta, T
     try:
         (x0, y0, beta, T) = map(float, ent5.get().split())
@@ -165,6 +166,42 @@ def ro_U_plots():
     fig.canvas.draw()
 
 
+def main():
+    for arg in sys.argv[1:]:
+        if arg == 'test1':
+            ent1.insert(0, '1 2')
+            ent2.insert(0, '3 4')
+            ent3.insert(0, '5')
+            z_par()
+            s_par()
+            ro_par()
+            comp_z()
+            comp_s()
+            comp_ro()
+            print('test1 - ok')
+        elif arg == 'test2':
+            ent4.insert(0, '6')
+            u_par()
+            U_grid()
+            print('test2 - ok')
+        elif arg == 'test3':
+            ent5.insert(0, '7, 8, 9, 10')
+            k_par()
+            Koshi()
+            print('test3 - ok')
+        else:
+            return 1
+    ent1.delete(0, END)
+    ent2.delete(0, END)
+    ent3.delete(0, END)
+    ent4.delete(0, END)
+    ent5.delete(0, END)
+    myApp()
+
+
+def myApp():
+    root.mainloop()
+
 warnings.filterwarnings('ignore')
 
 matplotlib.use('TkAgg')
@@ -201,54 +238,65 @@ lab1.place(relx=0.1, rely=0.1)
 
 ent1 = Entry()
 ent1.place(relx=0.4, rely=0.1)
-ent1.bind('<Return>', z_par)
+
+b11 = Button(text="Ввести параметры", command=z_par)
+b11.place(relx=0.6, rely=0.1)
 
 b1 = Button(text="Вычислить сетку для z(t)", command=comp_z)
-b1.place(relx=0.6, rely=0.1)
+b1.place(relx=0.7, rely=0.1)
 
 lab2 = Label(text='Введите параметры c, d функции S(t)\n(через пробел):', bg="white", fg="black")
 lab2.place(relx=0.1, rely=0.15)
 
 ent2 = Entry()
 ent2.place(relx=0.4, rely=0.15)
-ent2.bind('<Return>', s_par)
+
+b22 = Button(text="Ввести параметры", command=s_par)
+b22.place(relx=0.6, rely=0.15)
 
 b2 = Button(text="Вычислить сетку для S(t)", command=comp_s)
-b2.place(relx=0.6, rely=0.15)
+b2.place(relx=0.7, rely=0.15)
 
 lab3 = Label(text='Введите параметр e функции ro(t):', bg="white", fg="black")
 lab3.place(relx=0.1, rely=0.2)
 
 ent3 = Entry()
 ent3.place(relx=0.4, rely=0.2)
-ent3.bind('<Return>', ro_par)
+
+b33 = Button(text="Ввести параметры", command=ro_par)
+b33.place(relx=0.6, rely=0.2)
 
 b3 = Button(text="Вычислить сетку для ro(w)", command=comp_ro)
-b3.place(relx=0.6, rely=0.2)
+b3.place(relx=0.7, rely=0.2)
 
 lab4 = Label(text='Введите параметр разбиения dy:', bg="white", fg="black")
 lab4.place(relx=0.1, rely=0.25)
 
 ent4 = Entry()
 ent4.place(relx=0.4, rely=0.25)
-ent4.bind('<Return>', u_par)
+
+b44 = Button(text="Ввести параметры", command=s_par)
+b44.place(relx=0.6, rely=0.25)
 
 b4 = Button(text="Вычислить сетку для U(y)", command=U_grid)
-b4.place(relx=0.6, rely=0.25)
+b4.place(relx=0.7, rely=0.25)
 
 lab5 = Label(text='Введите параметры x0, y0, beta, T для задачи Коши\n(через пробел):', bg="white", fg="black")
 lab5.place(relx=0.1, rely=0.3)
 
 ent5 = Entry()
 ent5.place(relx=0.4, rely=0.3)
-ent5.bind('<Return>', k_par)
+
+b55 = Button(text="Ввести параметры", command=k_par)
+b55.place(relx=0.6, rely=0.3)
 
 b5 = Button(text="Решить задачу Коши для вычисленных сеток", command=Koshi)
-b5.place(relx=0.6, rely=0.3)
+b5.place(relx=0.7, rely=0.3)
 
 b6 = Button(text="Показать графики", command=ro_U_plots)
 b6.place(relx=0.4, rely=0.35)
 
 plot_widget.place(relx=0, rely=0.4)
 
-root.mainloop()
+if __name__ == "__main__":
+    main()
