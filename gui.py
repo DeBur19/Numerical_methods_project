@@ -5,44 +5,115 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
+import warnings
 
 
-def read_z():
-    global z
-    file_name = fd.askopenfilename(filetypes=[("csv files", "*.csv")])
+def z_par(ev):
+    global a, b
+    try:
+        (a, b) = map(float, ent1.get().split())
+        isok.set('Параметры z(t) введены успешно')
+    except BaseException:
+        isok.set('Ошибка ввода параметров z(t)')
+
+
+def s_par(ev):
+    global c, d
+    try:
+        (c, d) = map(float, ent2.get().split())
+        isok.set('Параметры S(t) введены успешно')
+    except BaseException:
+        isok.set('Ошибка ввода параметров S(t)')
+
+
+def ro_par(ev):
+    global e
+    try:
+        e = float(ent3.get())
+        isok.set('Параметр ro(w) введён успешно')
+    except BaseException:
+        isok.set('Ошибка ввода параметра ro(w)')
+
+
+def u_par(ev):
+    global dy
+    try:
+        dy = float(ent4.get())
+        isok.set('Параметр U(y) введён успешно')
+    except BaseException:
+        isok.set('Ошибка ввода параметра U(y)')
+
+
+def k_par(ev):
+    global x0, y0, beta, T
+    try:
+        (x0, y0, beta, T) = map(float, ent5.get().split())
+        isok.set('Параметры задачи Коши введены успешно')
+    except BaseException:
+        isok.set('Ошибка ввода параметров задачи Коши')
+
+
+def comp_z():
+    global z, a, b
+    if a is None:
+        isok.set('Ошибка вычисления сетки z(t): отсутствует a')
+        return
+    if b is None:
+        isok.set('Ошибка вычисления сетки z(t): отсутствует b')
+        return
+    z = pd.DataFrame({'t' : np.arange(0, 10), 'z(t)' : np.arange(0, 10)**2})
+    file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
     if file_name == '':
         return
-    z = pd.read_csv(file_name, engine='python')
+    z.to_csv(file_name + '.csv', index=False)
+    isok.set('Сетка для z(t) вычислена успешно')
 
 
-def read_s():
-    global S
-    file_name = fd.askopenfilename(filetypes=[("csv files", "*.csv")])
+def comp_s():
+    global S, c, d
+    if c is None:
+        isok.set('Ошибка вычисления сетки S(t): отсутствует c')
+        return
+    if d is None:
+        isok.set('Ошибка вычисления сетки S(t): отсутствует d')
+        return
+    S = pd.DataFrame({'t': np.arange(0, 10), 'S(t)': np.arange(0, 10)**3})
+    file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
     if file_name == '':
         return
-    S = pd.read_csv(file_name, engine='python')
+    S.to_csv(file_name + '.csv', index=False)
+    isok.set('Сетка для S(t) вычислена успешно')
 
-def read_ro():
-    global ro
-    file_name = fd.askopenfilename(filetypes=[("csv files", "*.csv")])
+
+def comp_ro():
+    global ro, e
+    if e is None:
+        isok.set('Ошибка вычисления сетки ro(w): отсутствует e')
+        return
+    ro = pd.DataFrame({'w': np.arange(0, 10), 'ro(w)': np.arange(0, 10)**2})
+    file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
     if file_name == '':
         return
-    ro = pd.read_csv(file_name, engine='python')
+    ro.to_csv(file_name + '.csv', index=False)
+    isok.set('Сетка для ro(w) вычислена успешно')
 
 
 def U_grid():
+    if dy is None:
+        isok.set('Ошибка вычисления сетки U(t): отсутствует dy')
+        return
     global U, ro
     if ro is None:
         isok.set('Ошибка расчёта сетки U(y): отсутствует сетка для ro(w)')
         return
+    U = pd.DataFrame({'t': np.arange(0, 10), 'S(t)': np.arange(0, 10)**3})
     file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
-    U = ro + ro
     U.to_csv(file_name + '.csv', index=False)
     isok.set('Сетка для U(y) вычислена успешно')
 
 
 def Koshi():
-    global U, S, z, ro, koshi
+    global U, S, z, ro, koshi, x0, y0, beta, T
     if ro is None:
         isok.set('Ошибка решения задачи Коши: отсутствует сетка для ro(w)')
         return
@@ -54,6 +125,18 @@ def Koshi():
         return
     if U is None:
         isok.set('Ошибка решения задачи Коши: отсутствует сетка для U(y)')
+        return
+    if x0 is None:
+        isok.set('Ошибка решения задачи Коши: отсутствует x0')
+        return
+    if y0 is None:
+        isok.set('Ошибка решения задачи Коши: отсутствует y0')
+        return
+    if beta is None:
+        isok.set('Ошибка решения задачи Коши: отсутствует beta')
+        return
+    if T is None:
+        isok.set('Ошибка решения задачи Коши: отсутствует T')
         return
     file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
     koshi = U + S + z + ro
@@ -82,15 +165,27 @@ def ro_U_plots():
     fig.canvas.draw()
 
 
+warnings.filterwarnings('ignore')
+
 matplotlib.use('TkAgg')
 
 root = Tk()
 
+a = None
+b = None
+c = None
+d = None
+e = None
 z = None
 S = None
 ro = None
 U = None
 koshi = None
+dy = None
+x0 = None
+y0 = None
+beta = None
+T = None
 
 fig = plt.figure(1, figsize=(14, 6))
 canvas = FigureCanvasTkAgg(fig, master=root)
@@ -99,26 +194,61 @@ plot_widget = canvas.get_tk_widget()
 isok = StringVar()
 isok.set('')
 lab1 = Label(textvariable=isok, bg="white", fg="red")
-lab1.pack()
+lab1.place(relx=0.4, rely=0.05)
 
-b1 = Button(text="Загрузить сетку для Z(t)", command=read_z)
-b1.pack()
+lab1 = Label(text='Введите параметры a, b функции z(t)\n(через пробел):', bg="white", fg="black")
+lab1.place(relx=0.1, rely=0.1)
 
-b2 = Button(text="Загрузить сетку для S(t)", command=read_s)
-b2.pack()
+ent1 = Entry()
+ent1.place(relx=0.4, rely=0.1)
+ent1.bind('<Return>', z_par)
 
-b3 = Button(text="Загрузить сетку для ro(w)", command=read_ro)
-b3.pack()
+b1 = Button(text="Вычислить сетку для z(t)", command=comp_z)
+b1.place(relx=0.6, rely=0.1)
+
+lab2 = Label(text='Введите параметры c, d функции S(t)\n(через пробел):', bg="white", fg="black")
+lab2.place(relx=0.1, rely=0.15)
+
+ent2 = Entry()
+ent2.place(relx=0.4, rely=0.15)
+ent2.bind('<Return>', s_par)
+
+b2 = Button(text="Вычислить сетку для S(t)", command=comp_s)
+b2.place(relx=0.6, rely=0.15)
+
+lab3 = Label(text='Введите параметр e функции ro(t):', bg="white", fg="black")
+lab3.place(relx=0.1, rely=0.2)
+
+ent3 = Entry()
+ent3.place(relx=0.4, rely=0.2)
+ent3.bind('<Return>', ro_par)
+
+b3 = Button(text="Вычислить сетку для ro(w)", command=comp_ro)
+b3.place(relx=0.6, rely=0.2)
+
+lab4 = Label(text='Введите параметр разбиения dy:', bg="white", fg="black")
+lab4.place(relx=0.1, rely=0.25)
+
+ent4 = Entry()
+ent4.place(relx=0.4, rely=0.25)
+ent4.bind('<Return>', u_par)
 
 b4 = Button(text="Вычислить сетку для U(y)", command=U_grid)
-b4.pack()
+b4.place(relx=0.6, rely=0.25)
+
+lab5 = Label(text='Введите параметры x0, y0, beta, T для задачи Коши\n(через пробел):', bg="white", fg="black")
+lab5.place(relx=0.1, rely=0.3)
+
+ent5 = Entry()
+ent5.place(relx=0.4, rely=0.3)
+ent5.bind('<Return>', k_par)
 
 b5 = Button(text="Решить задачу Коши для вычисленных сеток", command=Koshi)
-b5.pack()
+b5.place(relx=0.6, rely=0.3)
 
 b6 = Button(text="Показать графики", command=ro_U_plots)
-b6.pack()
+b6.place(relx=0.4, rely=0.35)
 
-plot_widget.pack()
+plot_widget.place(relx=0, rely=0.4)
 
 root.mainloop()
