@@ -62,10 +62,10 @@ def comp_z():
     if b is None:
         isok.set('Ошибка вычисления сетки z(t): отсутствует b')
         return
-    z = pd.DataFrame({'t' : np.arange(0, 10), 'z(t)' : np.arange(0, 10)**2})
-    file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
+    file_name = fd.asksaveasfilename(title='z(t)', filetypes=[("csv files", "*.csv")])
     if file_name == '':
         return
+    z = pd.DataFrame({'t': np.arange(0, 10), 'z(t)': np.arange(0, 10) ** 2})
     z.to_csv(file_name + '.csv', index=False)
     isok.set('Сетка для z(t) вычислена успешно')
 
@@ -78,10 +78,10 @@ def comp_s():
     if d is None:
         isok.set('Ошибка вычисления сетки S(t): отсутствует d')
         return
-    S = pd.DataFrame({'t': np.arange(0, 10), 'S(t)': np.arange(0, 10)**3})
-    file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
+    file_name = fd.asksaveasfilename(title='S(t)', filetypes=[("csv files", "*.csv")])
     if file_name == '':
         return
+    S = pd.DataFrame({'t': np.arange(0, 10), 'S(t)': np.arange(0, 10) ** 3})
     S.to_csv(file_name + '.csv', index=False)
     isok.set('Сетка для S(t) вычислена успешно')
 
@@ -91,24 +91,26 @@ def comp_ro():
     if e is None:
         isok.set('Ошибка вычисления сетки ro(w): отсутствует e')
         return
-    ro = pd.DataFrame({'w': np.arange(0, 10), 'ro(w)': np.arange(0, 10)**2})
-    file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
+    file_name = fd.asksaveasfilename(title='ro(w)', filetypes=[("csv files", "*.csv")])
     if file_name == '':
         return
+    ro = pd.DataFrame({'w': np.arange(0, 10), 'ro(w)': np.arange(0, 10) ** 2})
     ro.to_csv(file_name + '.csv', index=False)
     isok.set('Сетка для ro(w) вычислена успешно')
 
 
 def U_grid():
+    global U, ro, dy
     if dy is None:
         isok.set('Ошибка вычисления сетки U(t): отсутствует dy')
         return
-    global U, ro
     if ro is None:
         isok.set('Ошибка расчёта сетки U(y): отсутствует сетка для ro(w)')
         return
-    U = pd.DataFrame({'t': np.arange(0, 10), 'S(t)': np.arange(0, 10)**3})
-    file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
+    file_name = fd.asksaveasfilename(title='U(y)', filetypes=[("csv files", "*.csv")])
+    if file_name == '':
+        return
+    U = pd.DataFrame({'t': np.arange(0, 10), 'S(t)': np.arange(0, 10) ** 3})
     U.to_csv(file_name + '.csv', index=False)
     isok.set('Сетка для U(y) вычислена успешно')
 
@@ -139,7 +141,9 @@ def Koshi():
     if T is None:
         isok.set('Ошибка решения задачи Коши: отсутствует T')
         return
-    file_name = fd.asksaveasfilename(filetypes=[("csv files", "*.csv")])
+    file_name = fd.asksaveasfilename(title='Koshi', filetypes=[("csv files", "*.csv")])
+    if file_name == '':
+        return
     koshi = U + S + z + ro
     koshi.to_csv(file_name + '.csv', index=False)
     isok.set('Задача Коши решена успешно')
@@ -180,11 +184,26 @@ def main():
             comp_ro()
             print('test1 - ok')
         elif arg == 'test2':
+            ent3.insert(0, '5')
             ent4.insert(0, '6')
+            ro_par()
+            comp_ro()
             u_par()
             U_grid()
             print('test2 - ok')
         elif arg == 'test3':
+            ent1.insert(0, '1 2')
+            ent2.insert(0, '3 4')
+            ent3.insert(0, '5')
+            ent4.insert(0, '6')
+            z_par()
+            s_par()
+            ro_par()
+            u_par()
+            comp_z()
+            comp_s()
+            comp_ro()
+            U_grid()
             ent5.insert(0, '7, 8, 9, 10')
             k_par()
             Koshi()
