@@ -294,7 +294,7 @@ lab4.place(relx=0.1, rely=0.25)
 ent4 = Entry()
 ent4.place(relx=0.4, rely=0.25)
 
-b44 = Button(text="Ввести параметры", command=s_par)
+b44 = Button(text="Ввести параметры", command=u_par)
 b44.place(relx=0.6, rely=0.25)
 
 b4 = Button(text="Вычислить сетку для U(y)", command=U_grid)
