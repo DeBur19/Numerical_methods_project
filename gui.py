@@ -9,6 +9,14 @@ import warnings
 import sys
 
 
+def integral_trap(x, y, N):
+    ans = 0
+    h = (x[N] - x[0]) / (2 * N)
+    for i in range(N):
+        ans += (y[i] + y[i + 1])
+    return ans * h
+
+
 def z_par():
     global a, b
     try:
