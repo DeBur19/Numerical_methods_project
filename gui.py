@@ -72,10 +72,18 @@ def Koshi_Adams(t_, f_0, f_1, u_0):
     f1 = np.empty(2)
     # вычислим u_1 с помощью явной схемы Эйлера
     u[:, 1] = u[:, 0] + tao * f0
+    if u[1, 1] < 0:
+        u[1, 1] = 0
+    elif u[1, 1] > 1:
+        u[1, 1] = 1
     # вычислим остальные значения u_k с помощью явной схемы Адамса
     for k in range(1, n - 1):
         f1 = np.array([f_0(t[k], u[:, k]), f_1(t[k], u[:, k])])
         u[:, k + 1] = u[:, k] + (tao / 2) * (3 * f1 - f0)
+        if u[1, k + 1] < 0:
+            u[1, k + 1] = 0
+        elif u[1, k + 1] > 1:
+            u[1, k + 1] = 1
         f0, f1 = f1, f0
     return u
 
@@ -206,10 +214,6 @@ def U_grid():
 
 def func1(t, u):
     tmpu = u[1]
-    if tmpu < 0:
-        tmpu = 0
-    elif tmpu > 1:
-        tmpu = 1
     tmpz = a - b * np.sin(t)
     return tmpz * interpolated_func(tmpu, y, aU, bU, cU, dU)
 
@@ -257,6 +261,89 @@ def Koshi():
     isok.set('Задача Коши решена успешно')
 
 
+def crit1(x_0):
+    tmpint = np.linspace(0, T, 1000)
+    tmpint2 = np.empty(1000)
+    tmpy = np.array(koshi['y(t)'])
+    tmpx = np.array(koshi['x(t)'])
+    y_ = np.linspace(0, 1, numy + 2)
+    U_y = np.empty(y_.shape[0])
+    for i in range(y_.shape[0] - 1):
+        w = np.linspace(y_[i], 1, 1000)
+        ro_w = e * w * (f - w) * w
+        U_y[i] = integral_trap(w, ro_w, w.shape[0] - 1)
+    U_y[y.shape[0] - 1] = 0
+    aU_, bU_, cU_, dU_ = cubic_spline(y_, U_y)
+    for i in range(999):
+        tmpz = a - b * np.sin(tmpint[i])
+        tmp = tmpz * interpolated_func(tmpy[i], y, aU, bU, cU, dU)
+        tmpint2[i] = interpolated_func(tmpy[i], y_, aU_, bU_, cU_, dU_) * tmp
+    tmpint2[999] = 0
+    integral = integral_trap(tmpint, tmpint2, 999)
+    return 1 - (integral / (tmpx[-1] - x_0))
+
+
+def crit2():
+    x = np.array(koshi['x(t)'])
+    s = np.array(S['S(t)'])
+    return np.abs(x[-1] - s[-1]) / s[-1]
+
+
+def Koshi_auto():
+    global U, inter_coeffs, S, z, ro, koshi, x0, y0, betas, T, beta, C1s, C2s, Cs
+    if ro is None:
+        isok.set('Ошибка решения задачи Коши: отсутствует сетка для ro(w)')
+        return
+    if S is None:
+        isok.set('Ошибка решения задачи Коши: отсутствует сетка для S(t)')
+        return
+    if z is None:
+        isok.set('Ошибка решения задачи Коши: отсутствует сетка для z(t)')
+        return
+    if U is None:
+        isok.set('Ошибка решения задачи Коши: отсутствует сетка для U(y)')
+        return
+    if inter_coeffs is None:
+        isok.set('Ошибка решения задачи Коши: отсутствуют коэффиценты интерполяции для U(y)')
+        return
+    if T is None:
+        isok.set('Ошибка решения задачи Коши: отсутствует T')
+        return
+    try:
+        (beta1, beta2, x0, y0) = map(float, ent6.get().split())
+        isok.set('Параметры подбора оптимального beta введены успешно')
+    except BaseException:
+        isok.set('Ошибка ввода параметров подбора оптимального beta')
+        return
+    betas = np.linspace(beta1, beta2, 100)
+    C1s = []
+    C2s = []
+    Cs = []
+    beta_best = betas[0]
+    koshi_best = None
+    minC = 1000000
+    for b in betas:
+        beta = b
+        koshi_ans = Koshi_Adams(np.linspace(0, T, 1000), func1, func2, np.array([x0, y0]))
+        koshi = pd.DataFrame({'t': np.linspace(0, T, 1000), 'x(t)': koshi_ans[0], 'y(t)': koshi_ans[1]})
+        c1 = crit1(x0)
+        c2 = crit2()
+        C1s.append(c1)
+        C2s.append(c2)
+        C = c1 + 10 * c2
+        Cs.append(C)
+        if C < minC:
+            minC = C
+            beta_best = b
+            koshi_best = koshi.copy()
+    koshi = koshi_best.copy()
+    beta = beta_best
+    C1s = np.array(C1s)
+    C2s = np.array(C2s)
+    Cs = np.array(Cs)
+    isok.set('Подбор оптимального beta завершён. Результаты:\nОптимальное beta={}, Ф(beta)={}'.format(beta, minC))
+
+
 def plots():
     if ro is None:
         isok.set('Ошибка построения графиков: отсутствует сетка для ro(w)')
@@ -268,12 +355,12 @@ def plots():
         isok.set('Ошибка построения графиков: отсутствует решение задачи Коши')
         return
     plt.clf()
-    plt.subplot(141)
+    plt.subplot(151)
     plt.plot(ro.iloc[:,0], ro.iloc[:,1])
     plt.title('График ro(w)')
     plt.xlabel('w')
     plt.ylabel('ro(w)')
-    plt.subplot(142)
+    plt.subplot(152)
     plt.plot(koshi['t'], koshi['x(t)'], label='x(t)')
     plt.plot(S['t'], S['S(t)'], label='S(t)')
     diffSx = np.array(koshi['x(t)']) - np.array(S['S(t)'])
@@ -281,31 +368,94 @@ def plots():
     plt.title('Графики x(t), S(t), x(t)-S(t)')
     plt.xlabel('t')
     plt.legend()
-    plt.subplot(143)
+    plt.subplot(153)
     plt.plot(z['t'], z['z(t)'], label='z(t)')
     plt.title('График z(t)')
     plt.xlabel('t')
-    plt.ylabel('z(t)')
-    plt.subplot(144)
+    plt.subplot(154)
     plt.plot(koshi['t'], koshi['y(t)'], label='y(t)')
     plt.title('График y(t)')
     plt.xlabel('t')
-    plt.ylabel('y(t)')
-    # if betas is not None:
-    #    plt.subplot()
+    plt.subplot(155)
+    plt.plot(koshi['x(t)'], S['S(t)'])
+    plt.title('График S(x)')
+    plt.xlabel('x')
     fig.canvas.draw()
 
 
+def print_crits():
+    global U, inter_coeffs, S, z, ro, koshi, x0, y0, beta, T
+    if ro is None:
+        isok.set('Ошибка вычисления критериев: отсутствует сетка для ro(w)')
+        return
+    if S is None:
+        isok.set('Ошибка вычисления критериев: отсутствует сетка для S(t)')
+        return
+    if z is None:
+        isok.set('Ошибка вычисления критериев: отсутствует сетка для z(t)')
+        return
+    if U is None:
+        isok.set('Ошибка вычисления критериев: отсутствует сетка для U(y)')
+        return
+    if inter_coeffs is None:
+        isok.set('Ошибка вычисления критериев: отсутствуют коэффиценты интерполяции для U(y)')
+        return
+    if x0 is None:
+        isok.set('Ошибка вычисления критериев: отсутствует x0')
+        return
+    if y0 is None:
+        isok.set('Ошибка вычисления критериев: отсутствует y0')
+        return
+    if beta is None:
+        isok.set('Ошибка вычисления критериев: отсутствует beta')
+        return
+    if T is None:
+        isok.set('Ошибка вычисления критериев: отсутствует T')
+        return
+    if koshi is None:
+        isok.set('Ошибка вычисления критериев: отсутствует решение задачи Коши')
+        return
+    critslab.set('C_1={}, C_2={}'.format(crit1(x0), crit2()))
+
+
 def crit_plots():
-    None
+    if C1s is None:
+        isok.set('Ошибка построения графиков: Подбор оптимального beta не был запущен')
+        return
+    if C2s is None:
+        isok.set('Ошибка построения графиков: Подбор оптимального beta не был запущен')
+        return
+    if Cs is None:
+        isok.set('Ошибка построения графиков: Подбор оптимального beta не был запущен')
+        return
+    if betas is None:
+        isok.set('Ошибка построения графиков: Подбор оптимального beta не был запущен')
+        return
+    plt.clf()
+    plt.subplot(131)
+    plt.plot(betas, C1s)
+    plt.title('График C_1(beta)')
+    plt.xlabel('beta')
+    plt.ylabel('C_1(beta)')
+    plt.subplot(132)
+    plt.plot(betas, C2s)
+    plt.title('График C_2(beta)')
+    plt.xlabel('beta')
+    plt.ylabel('C_2(beta)')
+    plt.subplot(133)
+    plt.plot(betas, Cs)
+    plt.title('График Ф(beta)=C_1(beta)+10*C_2(beta)')
+    plt.xlabel('beta')
+    plt.ylabel('Ф(beta)')
+    fig.canvas.draw()
 
 
 def main():
     for arg in sys.argv[1:]:
         if arg == 'test1':
-            ent1.insert(0, '1 2')
-            ent2.insert(0, '3 4')
-            ent3.insert(0, '5')
+            ent1.insert(0, '4 1 1')
+            ent2.insert(0, '3 1')
+            ent3.insert(0, '6 1')
             z_par()
             s_par()
             ro_par()
@@ -314,18 +464,18 @@ def main():
             comp_ro()
             print('test1 - ok')
         elif arg == 'test2':
-            ent3.insert(0, '5')
-            ent4.insert(0, '6')
+            ent3.insert(0, '6 1')
+            ent4.insert(0, '10')
             ro_par()
             comp_ro()
             u_par()
             U_grid()
             print('test2 - ok')
         elif arg == 'test3':
-            ent1.insert(0, '1 2')
-            ent2.insert(0, '3 4')
-            ent3.insert(0, '5')
-            ent4.insert(0, '6')
+            ent1.insert(0, '4 1 1')
+            ent2.insert(0, '3 1')
+            ent3.insert(0, '6 1')
+            ent4.insert(0, '10')
             z_par()
             s_par()
             ro_par()
@@ -334,7 +484,7 @@ def main():
             comp_s()
             comp_ro()
             U_grid()
-            ent5.insert(0, '7 8 9 10')
+            ent5.insert(0, '0 0 0.01')
             k_par()
             Koshi()
             print('test3 - ok')
@@ -380,6 +530,9 @@ aU = None
 bU = None
 cU = None
 dU = None
+C1s = None
+C2s = None
+Cs = None
 
 fig = plt.figure(1, figsize=(20, 6))
 canvas = FigureCanvasTkAgg(fig, master=root)
@@ -387,74 +540,90 @@ plot_widget = canvas.get_tk_widget()
 
 isok = StringVar()
 isok.set('')
-lab1 = Label(textvariable=isok, bg="white", fg="red")
-lab1.place(relx=0.4, rely=0.05)
+lab0 = Label(textvariable=isok, bg="white", fg="red")
+lab0.place(relx=0.4, rely=0.05)
 
 lab1 = Label(text='Введите параметры a, b функции z(t)=at+bcos(t),\nа также T (через пробел):', bg="white", fg="black")
 lab1.place(relx=0.1, rely=0.1)
 
 ent1 = Entry()
-ent1.place(relx=0.4, rely=0.1)
+ent1.place(relx=0.3, rely=0.1)
 
 b11 = Button(text="Ввести параметры", command=z_par)
-b11.place(relx=0.6, rely=0.1)
+b11.place(relx=0.45, rely=0.1)
 
 b1 = Button(text="Вычислить сетку для z(t)", command=comp_z)
-b1.place(relx=0.7, rely=0.1)
+b1.place(relx=0.55, rely=0.1)
 
 lab2 = Label(text='Введите параметры c, d функции S(t)=ct+dsin(t)\n(через пробел):', bg="white", fg="black")
 lab2.place(relx=0.1, rely=0.15)
 
 ent2 = Entry()
-ent2.place(relx=0.4, rely=0.15)
+ent2.place(relx=0.3, rely=0.15)
 
 b22 = Button(text="Ввести параметры", command=s_par)
-b22.place(relx=0.6, rely=0.15)
+b22.place(relx=0.45, rely=0.15)
 
 b2 = Button(text="Вычислить сетку для S(t)", command=comp_s)
-b2.place(relx=0.7, rely=0.15)
+b2.place(relx=0.55, rely=0.15)
 
 lab3 = Label(text='Введите параметры e, f функции ro(t)=ew(f-w):', bg="white", fg="black")
 lab3.place(relx=0.1, rely=0.2)
 
 ent3 = Entry()
-ent3.place(relx=0.4, rely=0.2)
+ent3.place(relx=0.3, rely=0.2)
 
 b33 = Button(text="Ввести параметры", command=ro_par)
-b33.place(relx=0.6, rely=0.2)
+b33.place(relx=0.45, rely=0.2)
 
 b3 = Button(text="Вычислить сетку для ro(w)", command=comp_ro)
-b3.place(relx=0.7, rely=0.2)
+b3.place(relx=0.55, rely=0.2)
 
 lab4 = Label(text='Введите количество точек разбиения numy:', bg="white", fg="black")
 lab4.place(relx=0.1, rely=0.25)
 
 ent4 = Entry()
-ent4.place(relx=0.4, rely=0.25)
+ent4.place(relx=0.3, rely=0.25)
 
 b44 = Button(text="Ввести параметры", command=u_par)
-b44.place(relx=0.6, rely=0.25)
+b44.place(relx=0.45, rely=0.25)
 
 b4 = Button(text="Вычислить сетку для U(y)", command=U_grid)
-b4.place(relx=0.7, rely=0.25)
+b4.place(relx=0.55, rely=0.25)
 
 lab5 = Label(text='Введите параметры x0, y0, beta для задачи Коши\n(через пробел):', bg="white", fg="black")
 lab5.place(relx=0.1, rely=0.3)
 
 ent5 = Entry()
-ent5.place(relx=0.4, rely=0.3)
+ent5.place(relx=0.3, rely=0.3)
 
 b55 = Button(text="Ввести параметры", command=k_par)
-b55.place(relx=0.6, rely=0.3)
+b55.place(relx=0.45, rely=0.3)
 
 b5 = Button(text="Решить задачу Коши для вычисленных сеток", command=Koshi)
-b5.place(relx=0.7, rely=0.3)
+b5.place(relx=0.55, rely=0.3)
+
+bcrit = Button(text="Вычислить значения критериев", command=print_crits)
+bcrit.place(relx=0.7, rely=0.3)
+
+critslab = StringVar()
+critslab.set('')
+labcrit = Label(textvariable=critslab, bg="white", fg="black")
+labcrit.place(relx=0.7, rely=0.35)
+
+ent6 = Entry()
+ent6.place(relx=0.3, rely=0.35)
+
+bauto = Button(text="Автоматический подбор оптимального beta"
+                    "\n(введите слева границы отрезка [beta1, beta2],\n"
+                    "а также x0, y0. Всё через пробел)", command=Koshi_auto)
+bauto.place(relx=0.45, rely=0.33)
 
 b6 = Button(text="Показать графики", command=plots)
-b6.place(relx=0.3, rely=0.35)
+b6.place(relx=0.05, rely=0.35)
 
 b7 = Button(text="Показать графики критериев", command=crit_plots)
-b7.place(relx=0.5, rely=0.35)
+b7.place(relx=0.15, rely=0.35)
 
 plot_widget.place(relx=0, rely=0.4)
 
