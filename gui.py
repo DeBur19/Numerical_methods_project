@@ -315,6 +315,9 @@ def Koshi_auto():
     except BaseException:
         isok.set('Ошибка ввода параметров подбора оптимального beta')
         return
+    if beta1 >= beta2:
+        isok.set('Ошибка ввода параметров подбора оптимального beta: beta1 >= beta2')
+        return
     betas = np.linspace(beta1, beta2, 100)
     C1s = []
     C2s = []
@@ -336,11 +339,34 @@ def Koshi_auto():
             minC = C
             beta_best = b
             koshi_best = koshi.copy()
-    koshi = koshi_best.copy()
     beta = beta_best
     C1s = np.array(C1s)
     C2s = np.array(C2s)
     Cs = np.array(Cs)
+    koshi = koshi_best.copy()
+    tmpx0 = x0
+    tmpy0 = y0
+    noise = np.random.rand(20)
+    biases = np.zeros(20)
+    x_best = np.array(koshi_best['x(t)'])
+    y_best = np.array(koshi_best['y(t)'])
+    for i in range(biases.shape[0]):
+        x0, y0 = tmpx0, tmpy0
+        x0 = x0 + noise[i]
+        y0 = min(1, y0 + noise[i])
+        koshi_ans = Koshi_Adams(np.linspace(0, T, 1000), func1, func2, np.array([x0, y0]))
+        koshi_ans[0] = koshi_ans[0] - x_best
+        koshi_ans[1] = koshi_ans[1] - y_best
+        biases[i] = np.max(np.linalg.norm(koshi_ans, axis=0))
+    x0, y0 = tmpx0, tmpy0
+    plt.clf()
+    ord = np.argsort(noise)
+    plt.plot(noise[ord], biases[ord])
+    plt.title('Отклонение (максимум нормы фробениуса) решений с начальными условиями (x0+noise, y0+noise)\n'
+              'от лучшего подобранного решения с (x0, y0) = ({}, {})'.format(x0, y0))
+    plt.xlabel('noise')
+    plt.ylabel('Отклонение')
+    fig.canvas.draw()
     isok.set('Подбор оптимального beta завершён. Результаты:\nОптимальное beta={}, Ф(beta)={}'.format(beta, minC))
 
 
