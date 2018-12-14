@@ -318,16 +318,19 @@ def Koshi_auto():
     if beta1 >= beta2:
         isok.set('Ошибка ввода параметров подбора оптимального beta: beta1 >= beta2')
         return
-    betas = np.linspace(beta1, beta2, 100)
+    betas = np.linspace(beta1, beta2, 20)
     C1s = []
     C2s = []
     Cs = []
     beta_best = betas[0]
     koshi_best = None
     minC = 1000000
+    plt.clf()
+    plt.subplot(131)
     for b in betas:
         beta = b
         koshi_ans = Koshi_Adams(np.linspace(0, T, 1000), func1, func2, np.array([x0, y0]))
+        plt.plot(koshi_ans[0], S['S(t)'], label='beta={}'.format(beta))
         koshi = pd.DataFrame({'t': np.linspace(0, T, 1000), 'x(t)': koshi_ans[0], 'y(t)': koshi_ans[1]})
         c1 = crit1(x0)
         c2 = crit2()
@@ -339,6 +342,9 @@ def Koshi_auto():
             minC = C
             beta_best = b
             koshi_best = koshi.copy()
+    plt.title('S(x) при разных beta')
+    plt.xlabel('x')
+    plt.ylabel('S')
     beta = beta_best
     C1s = np.array(C1s)
     C2s = np.array(C2s)
@@ -350,19 +356,24 @@ def Koshi_auto():
     biases = np.zeros(20)
     x_best = np.array(koshi_best['x(t)'])
     y_best = np.array(koshi_best['y(t)'])
+    plt.subplot(132)
     for i in range(biases.shape[0]):
         x0, y0 = tmpx0, tmpy0
         x0 = x0 + noise[i]
         y0 = min(1, y0 + noise[i])
         koshi_ans = Koshi_Adams(np.linspace(0, T, 1000), func1, func2, np.array([x0, y0]))
+        plt.plot(koshi_ans[0], S['S(t)'], label='x0={}, y0={}'.format(x0, y0))
         koshi_ans[0] = koshi_ans[0] - x_best
         koshi_ans[1] = koshi_ans[1] - y_best
         biases[i] = np.max(np.linalg.norm(koshi_ans, axis=0))
     x0, y0 = tmpx0, tmpy0
-    plt.clf()
+    plt.title('S(x) при разных x0={}+noise, y0={}+noise'.format(x0, y0))
+    plt.xlabel('x')
+    plt.ylabel('S')
     ord = np.argsort(noise)
+    plt.subplot(133)
     plt.plot(noise[ord], biases[ord])
-    plt.title('Отклонение (максимум нормы фробениуса) решений с начальными условиями (x0+noise, y0+noise)\n'
+    plt.title('Отклонение решений с начальными условиями (x0+noise, y0+noise)\n'
               'от лучшего подобранного решения с (x0, y0) = ({}, {})'.format(x0, y0))
     plt.xlabel('noise')
     plt.ylabel('Отклонение')
